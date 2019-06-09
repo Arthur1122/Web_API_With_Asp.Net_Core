@@ -7,6 +7,7 @@ using CoreCodeCamp.Data;
 using CoreCodeCamp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 
 namespace CoreCodeCamp.Controllers
 {
@@ -16,11 +17,13 @@ namespace CoreCodeCamp.Controllers
     {
         private readonly ICampRepository _repository;
         private readonly IMapper _mapper;
+        private readonly LinkGenerator _linkGenerator;
 
-        public CampsController(ICampRepository repository,IMapper mapper)
+        public CampsController(ICampRepository repository,IMapper mapper,LinkGenerator linkGenerator)
         {
             this._repository = repository;
             this._mapper = mapper;
+            this._linkGenerator = linkGenerator;
         }
 
         [HttpGet]
@@ -71,6 +74,39 @@ namespace CoreCodeCamp.Controllers
             {
                 return this.StatusCode(StatusCodes.Status500InternalServerError, "Database Failure");
             }
+        }
+
+        public async Task<ActionResult<CampModel>> Post(CampModel model)
+        {
+            try
+            {
+                var existing = await _repository.GetCampAsync(model.Moniker);
+                if (existing != null)
+                {
+                    return BadRequest("Moniker in use");
+                }
+                var location = _linkGenerator.GetPathByAction("Get",
+                    "Camps",
+                    new { moniker = model.Moniker });
+                if (string.IsNullOrWhiteSpace(location))
+                {
+                    return BadRequest("Could not use current moniker");
+                }
+
+                Camp camp = _mapper.Map<Camp>(model);
+                _repository.Add(camp);
+                if (await _repository.SaveChangesAsync())
+                {
+                    return Created($"/api/camps/{camp.Moniker}", _mapper.Map<CampModel>(camp));
+                }
+            }
+            catch (Exception ex)
+            {
+
+                return this.StatusCode(StatusCodes.Status500InternalServerError, "Database Failure");
+            }
+            return BadRequest();
+
         }
     }
 }
