@@ -94,5 +94,41 @@ namespace CoreCodeCamp.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError,"Filed to get talk");
             }
         }
+
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<TalkModel>> Put(string moniker, int id, TalkModel model)
+        {
+            try
+            {
+                var talk = await _repository.GetTalkByMonikerAsync(moniker, id);
+                if (talk == null) return NotFound("Could not find the talk ");
+
+                _mapper.Map(model, talk);
+
+                if (model.Speaker != null)
+                {
+                    var speaker = await _repository.GetSpeakerAsync(model.Speaker.SpeakerId);
+                    if (speaker != null)
+                    {
+                        talk.Speaker = speaker;
+                    }
+                }
+
+                if(await _repository.SaveChangesAsync())
+                {
+                    return _mapper.Map<TalkModel>(talk);
+                }
+                else
+                {
+                    return _mapper.Map<TalkModel>(talk);
+                }
+
+            }
+            catch (Exception)
+            {
+
+                return StatusCode(StatusCodes.Status500InternalServerError, "Filed to get talk");
+            }
+        }
     }
 }
