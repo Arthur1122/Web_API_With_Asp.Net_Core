@@ -13,13 +13,13 @@ namespace CoreCodeCamp.Controllers
 {
     [ApiController]
     [Route("api/camps/{moniker}/talks")]
-    public class TalksController:ControllerBase
+    public class TalksController : ControllerBase
     {
         private readonly ICampRepository _repository;
         private readonly IMapper _mapper;
         private readonly LinkGenerator _linkGenerator;
 
-        public TalksController(ICampRepository repository,IMapper mapper, LinkGenerator linkGenerator)
+        public TalksController(ICampRepository repository, IMapper mapper, LinkGenerator linkGenerator)
         {
             this._repository = repository;
             this._mapper = mapper;
@@ -47,7 +47,8 @@ namespace CoreCodeCamp.Controllers
         {
             try
             {
-                var talk = await _repository.GetTalkByMonikerAsync(moniker, id,true);
+                var talk = await _repository.GetTalkByMonikerAsync(moniker, id, true);
+                if (talk == null) return NotFound("Could not found the talk ");
                 return _mapper.Map<TalkModel>(talk);
             }
             catch (Exception)
@@ -58,18 +59,18 @@ namespace CoreCodeCamp.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<TalkModel>> Post(string moniker,TalkModel model)
+        public async Task<ActionResult<TalkModel>> Post(string moniker, TalkModel model)
         {
             try
             {
                 var camp = await _repository.GetCampAsync(moniker);
-                if(camp == null) return  BadRequest("Camp does not exist.");
+                if (camp == null) return BadRequest("Camp does not exist.");
 
                 var talk = _mapper.Map<Talk>(model);
                 talk.Camp = camp;
 
                 if (model.Speaker == null) return BadRequest("Speaker Id is requaired");
-                var speaker =  await _repository.GetSpeakerAsync(model.Speaker.SpeakerId);
+                var speaker = await _repository.GetSpeakerAsync(model.Speaker.SpeakerId);
                 if (speaker == null) return BadRequest("Not Found Speaker");
                 talk.Speaker = speaker;
 
@@ -91,7 +92,7 @@ namespace CoreCodeCamp.Controllers
             catch (Exception ex)
             {
 
-                return StatusCode(StatusCodes.Status500InternalServerError,"Filed to get talk");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Filed to get talk");
             }
         }
 
@@ -114,7 +115,7 @@ namespace CoreCodeCamp.Controllers
                     }
                 }
 
-                if(await _repository.SaveChangesAsync())
+                if (await _repository.SaveChangesAsync())
                 {
                     return _mapper.Map<TalkModel>(talk);
                 }
@@ -123,6 +124,31 @@ namespace CoreCodeCamp.Controllers
                     return _mapper.Map<TalkModel>(talk);
                 }
 
+            }
+            catch (Exception)
+            {
+
+                return StatusCode(StatusCodes.Status500InternalServerError, "Filed to get talk");
+            }
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(string moniker, int id)
+        {
+            try
+            {
+                var talk = await _repository.GetTalkByMonikerAsync(moniker, id);
+                if (talk == null) return NotFound("Could't found the talk");
+
+                _repository.Delete(talk);
+                if (await _repository.SaveChangesAsync())
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return BadRequest("failde to Delete Talk");
+                }
             }
             catch (Exception)
             {
