@@ -26,7 +26,9 @@ namespace CoreCodeCamp
 
       services.AddApiVersioning(opt =>
       {
+          opt.AssumeDefaultVersionWhenUnspecified = true;
           opt.DefaultApiVersion = new ApiVersion(1, 1);
+          opt.ReportApiVersions = true;
       });
 
       services.AddMvc(opt => opt.EnableEndpointRouting=false)
